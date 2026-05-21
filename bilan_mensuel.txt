@@ -1,0 +1,19 @@
+=== BILAN MENSUEL - 2026-05 ===
+Généré le : 2026-05-21 12:01:53
+
+Nombre de ventes       : 1
+Chiffre d'affaires     : 9.80 €
+
+--- Top produits (CA) ---
+  Café moulu                           7.00 €
+  Thé vert                             2.80 €
+
+--- Top clients (montant dépensé ce mois) ---
+  Alice Dupont                         9.80 €
+
+--- État du stock ---
+  [P004] Biscuits                      2.50 €   stock: 30
+  [P001] Café moulu                    3.50 €   stock: 98
+  [P005] Jus d'orange                  1.80 €   stock: 0 [RUPTURE]
+  [P003] Sucre en poudre               1.20 €   stock: 200
+  [P002] Thé vert                      2.80 €   stock: 49
