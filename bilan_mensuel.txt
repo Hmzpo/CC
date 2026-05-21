@@ -1,19 +1,26 @@
 === BILAN MENSUEL - 2026-05 ===
-Généré le : 2026-05-21 12:01:53
+Généré le : 2026-05-21 13:19:36
 
-Nombre de ventes       : 1
-Chiffre d'affaires     : 9.80 €
+Nombre de ventes       : 4
+  dont payées          : 3
+  dont en ardoise      : 1
+Chiffre d'affaires     : 26.70 €
+Produit le plus vendu  : Café moulu (5 unités)
 
---- Top produits (CA) ---
-  Café moulu                           7.00 €
-  Thé vert                             2.80 €
+--- Top produits (CA ce mois) ---
+  Café moulu                          17.50 €
+  Thé vert                             5.60 €
+  Sucre en poudre                      3.60 €
 
---- Top clients (montant dépensé ce mois) ---
-  Alice Dupont                         9.80 €
+--- Top clients (montant ce mois) ---
+  Alice Dupont                        23.10 €
+  Bob Martin                           3.60 €
 
 --- État du stock ---
-  [P004] Biscuits                      2.50 €   stock: 30
-  [P001] Café moulu                    3.50 €   stock: 98
-  [P005] Jus d'orange                  1.80 €   stock: 0 [RUPTURE]
-  [P003] Sucre en poudre               1.20 €   stock: 200
-  [P002] Thé vert                      2.80 €   stock: 49
+  [P004] Biscuits                      2.50 €   stock: 4      [Snacks] [STOCK FAIBLE]
+  [P001] Café moulu                    3.50 €   stock: 98     [Boissons]
+  [P006] Chocolat noir                 1.90 €   stock: 3      [Snacks] [STOCK FAIBLE]
+  [P007] Farine                        0.90 €   stock: 80     [Épicerie]
+  [P005] Jus d'orange                  1.80 €   stock: 0      [Boissons] [RUPTURE]
+  [P003] Sucre en poudre               1.20 €   stock: 197    [Épicerie]
+  [P002] Thé vert                      2.80 €   stock: 49     [Boissons]

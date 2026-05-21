@@ -1,6 +1,8 @@
-# FORMAT : CODE|NOM|PRIX|QUANTITE
-P001|Café moulu|3.50|100
-P002|Thé vert|2.80|50
-P003|Sucre en poudre|1.20|200
-P004|Biscuits|2.50|30
-P005|Jus d'orange|1.80|0
+# FORMAT : CODE|NOM|PRIX|QUANTITE|CATEGORIE
+P001|Café moulu|3.50|100|Boissons
+P002|Thé vert|2.80|50|Boissons
+P003|Sucre en poudre|1.20|200|Épicerie
+P004|Biscuits|2.50|4|Snacks
+P005|Jus d'orange|1.80|0|Boissons
+P006|Chocolat noir|1.90|3|Snacks
+P007|Farine|0.90|80|Épicerie
