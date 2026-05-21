@@ -1,0 +1,252 @@
+"""Classe Magasin : gère l'inventaire, les clients et les ventes."""
+
+import os
+from datetime import datetime
+
+from produit import Produit
+from client import Client
+
+
+class Magasin:
+    """
+    Gère l'inventaire des produits, la liste des clients
+    et l'enregistrement des ventes.
+    """
+
+    FICHIER_STOCK   = "stock.txt"
+    FICHIER_CLIENTS = "clients.txt"
+    FICHIER_VENTES  = "ventes.log"
+    FICHIER_RAPPORT = "bilan_mensuel.txt"
+
+    def __init__(self):
+        # Dictionnaire code -> Produit pour un accès O(1) par code
+        self.produits: dict[str, Produit] = {}
+        # Dictionnaire nom -> Client (le nom est utilisé comme clé simple)
+        self.clients: dict[str, Client] = {}
+
+        self.charger_stock()
+        self.charger_clients()
+
+    # ----------------------------------------------------------
+    #  Chargement / sauvegarde du stock
+    # ----------------------------------------------------------
+
+    def charger_stock(self) -> None:
+        """Lit stock.txt et remplit le dictionnaire de produits."""
+        if not os.path.exists(self.FICHIER_STOCK):
+            return  # premier lancement : fichier inexistant, rien à charger
+        with open(self.FICHIER_STOCK, "r", encoding="utf-8") as f:
+            for ligne in f:
+                ligne = ligne.strip()
+                if not ligne or ligne.startswith("#"):
+                    continue  # ignorer les lignes vides et les commentaires
+                try:
+                    p = Produit.depuis_ligne(ligne)
+                    self.produits[p.code] = p
+                except ValueError as e:
+                    print(f"  [AVERTISSEMENT] {e}")
+
+    def sauvegarder_stock(self) -> None:
+        """Écrase stock.txt avec l'état actuel de l'inventaire."""
+        with open(self.FICHIER_STOCK, "w", encoding="utf-8") as f:
+            f.write("# FORMAT : CODE|NOM|PRIX|QUANTITE\n")
+            for p in self.produits.values():
+                f.write(p.vers_ligne())
+
+    # ----------------------------------------------------------
+    #  Chargement / sauvegarde des clients
+    # ----------------------------------------------------------
+
+    def charger_clients(self) -> None:
+        """Lit clients.txt et remplit le dictionnaire de clients."""
+        if not os.path.exists(self.FICHIER_CLIENTS):
+            return
+        with open(self.FICHIER_CLIENTS, "r", encoding="utf-8") as f:
+            for ligne in f:
+                ligne = ligne.strip()
+                if not ligne or ligne.startswith("#"):
+                    continue
+                try:
+                    c = Client.depuis_ligne(ligne)
+                    self.clients[c.nom] = c
+                except ValueError as e:
+                    print(f"  [AVERTISSEMENT] {e}")
+
+    def sauvegarder_clients(self) -> None:
+        """Écrase clients.txt avec l'état actuel des clients."""
+        with open(self.FICHIER_CLIENTS, "w", encoding="utf-8") as f:
+            f.write("# FORMAT : NOM|ADRESSE|DETTE\n")
+            for c in self.clients.values():
+                f.write(c.vers_ligne())
+
+    def sauvegarder_tout(self) -> None:
+        """Point de sauvegarde global appelé à la fermeture."""
+        self.sauvegarder_stock()
+        self.sauvegarder_clients()
+        print("  Données sauvegardées.")
+
+    # ----------------------------------------------------------
+    #  Gestion des produits
+    # ----------------------------------------------------------
+
+    def ajouter_produit(self, code: str, nom: str, prix: float, quantite: int) -> bool:
+        """
+        Ajoute un nouveau produit ou met à jour la quantité si le code existe.
+        Retourne True si création, False si mise à jour.
+        """
+        code = code.strip().upper()
+        if code in self.produits:
+            # Code déjà existant : on incrémente la quantité
+            self.produits[code].quantite += quantite
+            return False
+        self.produits[code] = Produit(code, nom, prix, quantite)
+        return True
+
+    def rechercher_produit(self, code: str) -> Produit | None:
+        return self.produits.get(code.strip().upper())
+
+    def produits_en_rupture(self) -> list[Produit]:
+        """Retourne la liste des produits dont la quantité est <= 0."""
+        return [p for p in self.produits.values() if p.quantite <= 0]
+
+    # ----------------------------------------------------------
+    #  Gestion des clients
+    # ----------------------------------------------------------
+
+    def ajouter_client(self, nom: str, adresse: str) -> bool:
+        """Crée un client. Retourne False si le nom existe déjà."""
+        if nom in self.clients:
+            return False
+        self.clients[nom] = Client(nom, adresse)
+        return True
+
+    # ----------------------------------------------------------
+    #  Enregistrement d'une vente
+    # ----------------------------------------------------------
+
+    def enregistrer_vente(self, nom_client: str, panier: list[tuple[str, int]]) -> float:
+        """
+        Effectue une vente.
+
+        panier : liste de tuples (code_produit, quantite_voulue)
+
+        - Vérifie la disponibilité de chaque article (1re passe).
+        - Décrémente les stocks (2e passe, seulement si tout est valide).
+        - Calcule le montant total.
+        - Écrit une ligne horodatée dans ventes.log.
+        - Met à jour la dette du client.
+
+        Retourne le montant total ou lève ValueError si problème.
+        """
+        if nom_client not in self.clients:
+            raise ValueError(f"Client inconnu : {nom_client}")
+
+        # Première passe : vérification des stocks sans modification
+        lignes_detail = []
+        total = 0.0
+        for code, qte in panier:
+            produit = self.rechercher_produit(code)
+            if produit is None:
+                raise ValueError(f"Produit inconnu : {code}")
+            if produit.quantite < qte:
+                raise ValueError(
+                    f"Stock insuffisant pour '{produit.nom}' "
+                    f"(demandé: {qte}, disponible: {produit.quantite})"
+                )
+            sous_total = produit.prix * qte
+            total += sous_total
+            lignes_detail.append((produit, qte, sous_total))
+
+        # Deuxième passe : mise à jour des stocks
+        for produit, qte, _ in lignes_detail:
+            produit.quantite -= qte
+
+        # Mise à jour de la dette du client
+        self.clients[nom_client].dette += total
+
+        # Journalisation dans ventes.log (mode append)
+        horodatage = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        detail_str = "; ".join(
+            f"{p.nom} x{q} ({st:.2f}€)" for p, q, st in lignes_detail
+        )
+        ligne_log = f"{horodatage} | {nom_client} | {detail_str} | TOTAL: {total:.2f}€\n"
+
+        with open(self.FICHIER_VENTES, "a", encoding="utf-8") as f:
+            f.write(ligne_log)
+
+        # Mémorisation locale dans l'historique du client
+        self.clients[nom_client].ajouter_achat(ligne_log.strip())
+
+        return total
+
+    # ----------------------------------------------------------
+    #  Génération du rapport mensuel
+    # ----------------------------------------------------------
+
+    def generer_rapport(self) -> str:
+        """
+        Analyse ventes.log pour le mois courant et écrit bilan_mensuel.txt.
+        Retourne le chemin du fichier créé.
+        """
+        mois_courant = datetime.now().strftime("%Y-%m")
+        total_mois = 0.0
+        nb_ventes = 0
+        compteur_produits: dict[str, float] = {}  # nom_produit -> chiffre d'affaires
+        compteur_clients: dict[str, float] = {}   # nom_client  -> montant dépensé
+
+        if os.path.exists(self.FICHIER_VENTES):
+            with open(self.FICHIER_VENTES, "r", encoding="utf-8") as f:
+                for ligne in f:
+                    if not ligne.strip() or not ligne.startswith(mois_courant):
+                        continue  # ignorer les ventes des autres mois
+                    nb_ventes += 1
+                    parties = ligne.split("|")
+                    if len(parties) < 4:
+                        continue
+                    nom_client = parties[1].strip()
+                    montant_str = parties[-1].replace("TOTAL:", "").replace("€", "").strip()
+                    try:
+                        montant = float(montant_str)
+                    except ValueError:
+                        continue
+                    total_mois += montant
+                    compteur_clients[nom_client] = compteur_clients.get(nom_client, 0) + montant
+
+                    # Extraction du détail produit depuis la partie centrale
+                    detail_partie = "|".join(parties[2:-1])
+                    for item in detail_partie.split(";"):
+                        item = item.strip()
+                        if " x" in item and "(" in item:
+                            nom_prod = item.split(" x")[0].strip()
+                            montant_prod_str = item.split("(")[-1].replace("€)", "").strip()
+                            try:
+                                compteur_produits[nom_prod] = (
+                                    compteur_produits.get(nom_prod, 0) + float(montant_prod_str)
+                                )
+                            except ValueError:
+                                pass
+
+        # Construction du rapport
+        lignes = [
+            f"=== BILAN MENSUEL - {mois_courant} ===\n",
+            f"Généré le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n",
+            f"Nombre de ventes       : {nb_ventes}\n",
+            f"Chiffre d'affaires     : {total_mois:.2f} €\n\n",
+            "--- Top produits (CA) ---\n",
+        ]
+        for nom, ca in sorted(compteur_produits.items(), key=lambda x: -x[1]):
+            lignes.append(f"  {nom:<30} {ca:>10.2f} €\n")
+
+        lignes.append("\n--- Top clients (montant dépensé ce mois) ---\n")
+        for nom, montant in sorted(compteur_clients.items(), key=lambda x: -x[1]):
+            lignes.append(f"  {nom:<30} {montant:>10.2f} €\n")
+
+        lignes.append("\n--- État du stock ---\n")
+        for p in sorted(self.produits.values(), key=lambda x: x.nom):
+            statut = " [RUPTURE]" if p.quantite <= 0 else ""
+            lignes.append(f"  {p}{statut}\n")
+
+        with open(self.FICHIER_RAPPORT, "w", encoding="utf-8") as f:
+            f.writelines(lignes)
+
+        return self.FICHIER_RAPPORT
