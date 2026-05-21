@@ -1,0 +1,3 @@
+# FORMAT : NOM|ADRESSE|DETTE
+Alice Dupont|12 rue des Fleurs 75001 Paris|0.00
+Bob Martin|5 avenue Victor Hugo 69001 Lyon|15.60
