@@ -347,6 +347,82 @@ class Menu:
         print(c.vert(f"  Rapport généré : {chemin}"))
 
     # ----------------------------------------------------------
+    #  Option h : Réapprovisionner un produit
+    # ----------------------------------------------------------
+
+    def reapprovisionner(self) -> None:
+        self.titre("RÉAPPROVISIONNEMENT")
+
+        # Afficher d'abord les ruptures et stocks faibles pour guider le choix
+        ruptures = self.magasin.produits_en_rupture()
+        faibles  = self.magasin.produits_stock_faible()
+
+        if ruptures:
+            print(c.rouge(f"  Ruptures ({len(ruptures)}) :"))
+            for p in ruptures:
+                print(c.rouge(f"    {p}"))
+
+        if faibles:
+            print(c.jaune(f"\n  Stock faible ({len(faibles)}) :"))
+            for p in faibles:
+                print(c.jaune(f"    {p}"))
+
+        if not ruptures and not faibles:
+            print(c.vert("  Tous les produits ont un stock suffisant."))
+
+        print()
+
+        # Saisie du produit à réapprovisionner (code ou nom)
+        saisie = input(
+            "  Code ou nom du produit à réapprovisionner (Entrée pour annuler) : "
+        ).strip()
+        if not saisie:
+            print(c.jaune("  Réapprovisionnement annulé."))
+            return
+
+        # Recherche par code d'abord, puis par nom
+        produit = self.magasin.rechercher_produit(saisie)
+        if produit is None:
+            resultats = self.magasin.rechercher_par_nom(saisie)
+            if len(resultats) == 1:
+                produit = resultats[0]
+            elif len(resultats) > 1:
+                print(c.bleu(f"  {len(resultats)} produits correspondent :"))
+                for p in resultats:
+                    print(f"    {p}")
+                code = input("  Entrez le code exact : ").strip()
+                produit = self.magasin.rechercher_produit(code)
+
+        if produit is None:
+            print(c.rouge("  Produit introuvable."))
+            return
+
+        # Afficher l'état actuel
+        print(c.bleu(f"\n  Produit sélectionné :"))
+        self.afficher_produit(produit)
+        print(f"  Stock actuel : {produit.quantite} unité(s)")
+
+        # Saisie de la quantité à ajouter
+        qte = self.saisir_int("  Quantité à ajouter : ")
+        if qte <= 0:
+            print(c.rouge("  Quantité invalide."))
+            return
+
+        # Confirmation
+        if not self.confirmer(
+            c.gras(f"  Ajouter {qte} unité(s) à '{produit.nom}' ?")
+        ):
+            print(c.jaune("  Réapprovisionnement annulé."))
+            return
+
+        # Mise à jour du stock
+        produit.quantite += qte
+        self.magasin.sauvegarder_stock()
+        print(c.vert(
+            f"  ✔ '{produit.nom}' réapprovisionné — nouveau stock : {produit.quantite} unité(s)"
+        ))
+
+    # ----------------------------------------------------------
     #  Boucle principale
     # ----------------------------------------------------------
 
@@ -360,7 +436,8 @@ class Menu:
         print(f"  {c.cyan('e)')} Afficher les clients")
         print(f"  {c.cyan('f)')} Produits en rupture de stock")
         print(f"  {c.cyan('g)')} Générer un rapport mensuel")
-        print(f"  {c.cyan('h)')} Quitter")
+        print(f"  {c.cyan('h)')} Réapprovisionner un produit")
+        print(f"  {c.cyan('i)')} Quitter")
         print(c.cyan("-"*52))
 
     def lancer(self) -> None:
@@ -375,6 +452,7 @@ class Menu:
             "e": self.afficher_clients,
             "f": self.produits_rupture,
             "g": self.generer_rapport,
+            "h": self.reapprovisionner,
         }
 
         while True:
@@ -382,7 +460,7 @@ class Menu:
             self.afficher_menu()
             choix = input("  Votre choix : ").strip().lower()
 
-            if choix == "h":
+            if choix == "i":
                 self.magasin.sauvegarder_tout()
                 print(c.vert("  Au revoir !"))
                 break
